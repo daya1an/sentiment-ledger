@@ -1,0 +1,127 @@
+# ============================================
+# IDE and Editor
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# ============================================
+# Build and Gradle
+# ============================================
+build/
+.gradle/
+gradle-wrapper.jar
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+dist/
+target/
+
+# ============================================
+# Java and Maven
+# ============================================
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ============================================
+# Spring Boot
+# ============================================
+/target/
+/bin/
+/out/
+*.log
+.springBeans
+.sts4-cache/
+
+# ============================================
+# Database and Local Services
+# ============================================
+/data/
+/mongodb_data/
+/redis_data/
+/kafka_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# Environment and Configuration
+# ============================================
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-dev.properties
+application-prod.properties
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================
+# Node (if using frontend build tools)
+# ============================================
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+
+# ============================================
+# Docker
+# ============================================
+.dockerignore
+docker-compose.override.yml
+
+# ============================================
+# Test Coverage and Reports
+# ============================================
+/coverage/
+*.lcov
+.nyc_output/
+build/reports/
+build/test-results/
+
+# ============================================
+# IntelliJ IDEA
+# ============================================
+*.iml
+out/
+.idea_modules/
+
+# ============================================
+# Miscellaneous
+# ============================================
+*.orig
+.tmp/
+temp/
