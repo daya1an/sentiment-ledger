@@ -27,10 +27,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
 	// Spring AI dependencies
-	implementation 'org.springframework.ai:spring-ai-advisors-vector-store'
 	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
-	implementation 'org.springframework.ai:spring-ai-starter-vector-store-mongodb-atlas'
 	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
+
+	implementation 'org.springframework.ai:spring-ai-advisors-vector-store'
+	implementation 'org.springframework.ai:spring-ai-starter-vector-store-mongodb-atlas' // (For RAG/Policy context)
 
 	//lombok
 	compileOnly 'org.projectlombok:lombok'
