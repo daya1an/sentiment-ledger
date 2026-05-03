@@ -14,7 +14,7 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic invoiceSubmittedTopic() {
         return TopicBuilder.name(INVOICE_SUBMITTED_TOPIC)
-                .partitions(3) // 3 partitions allow for parallel processing later if needed
+                .partitions(1) // 3 partitions allow for parallel processing later if needed
                 .replicas(1)   // 1 replica since we are running a single local broker
                 .build();
     }
