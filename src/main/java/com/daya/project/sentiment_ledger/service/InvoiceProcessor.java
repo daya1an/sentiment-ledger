@@ -15,34 +15,13 @@ public class InvoiceProcessor {
 
     private final StringRedisTemplate redisTemplate;
     private final PolicyRetrievalService policyRetrievalService;
+    private final AIDecisionService aiDecisionService;
 
-    public InvoiceProcessor(StringRedisTemplate redisTemplate, PolicyRetrievalService policyRetrievalService) {
+    public InvoiceProcessor(StringRedisTemplate redisTemplate, PolicyRetrievalService policyRetrievalService, AIDecisionService aiDecisionService) {
         this.redisTemplate = redisTemplate;
         this.policyRetrievalService = policyRetrievalService;
+        this.aiDecisionService = aiDecisionService;
     }
-
-//    @KafkaListener(topics = KafkaTopicConfig.INVOICE_SUBMITTED_TOPIC, groupId = "ledger-processing-group")
-//    public void consumeInvoiceEvent(Invoice invoice) {
-//        try {
-//            log.info("🔥 KAFKA EVENT RECEIVED for Invoice ID: {}", invoice.getId());
-//
-//            String lockKey = "invoice:lock:" + invoice.getId();
-//
-//            Boolean isNewInvoice = redisTemplate.opsForValue().setIfAbsent(lockKey, "LOCKED", Duration.ofHours(24));
-//
-//            if (Boolean.FALSE.equals(isNewInvoice)) {
-//                log.warn("⚠️ DUPLICATE DETECTED: Invoice ID {} is already locked. Dropping message.", invoice.getId());
-//                return;
-//            }
-//
-//            log.info("✅ Lock acquired. Processing Invoice...");
-//            log.info("Vendor: {}", invoice.getVendorName());
-//            log.info("Amount: ₹{}", invoice.getAmount());
-//
-//        } catch (Exception e) {
-//            log.error("❌ Failed to process Kafka message: {}", e.getMessage(), e);
-//        }
-//    }
 
     @KafkaListener(topics = "invoice-submitted", groupId = "ledger-processing-group")
     public void processInvoice(Invoice invoice) {
@@ -60,13 +39,15 @@ public class InvoiceProcessor {
 
         log.info("✅ Lock acquired. Processing Invoice ID: {}", invoice.getId());
 
-        // Dynamically get the category from the Kafka message
         String category = invoice.getCategory();
-
-        // 🧪 TEST THE RAG SERVICE 🧪
         log.info("🧠 Asking Vector Store for rules regarding: {}", category);
         String policies = policyRetrievalService.getPolicyContext(category);
 
-        log.info("📄 RETRIEVED POLICIES:\n{}", policies);
+//        log.info("📄 RETRIEVED POLICIES:\n{}", policies);
+
+        // NEW: Call AI for decision
+        String decision = aiDecisionService.getApprovalDecision(invoice, policies);
+
+        log.info("📋 DECISION: {}", decision);
     }
 }
