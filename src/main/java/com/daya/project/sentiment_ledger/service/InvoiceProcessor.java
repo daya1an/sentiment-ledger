@@ -21,29 +21,6 @@ public class InvoiceProcessor {
         this.policyRetrievalService = policyRetrievalService;
     }
 
-//    @KafkaListener(topics = KafkaTopicConfig.INVOICE_SUBMITTED_TOPIC, groupId = "ledger-processing-group")
-//    public void consumeInvoiceEvent(Invoice invoice) {
-//        try {
-//            log.info("🔥 KAFKA EVENT RECEIVED for Invoice ID: {}", invoice.getId());
-//
-//            String lockKey = "invoice:lock:" + invoice.getId();
-//
-//            Boolean isNewInvoice = redisTemplate.opsForValue().setIfAbsent(lockKey, "LOCKED", Duration.ofHours(24));
-//
-//            if (Boolean.FALSE.equals(isNewInvoice)) {
-//                log.warn("⚠️ DUPLICATE DETECTED: Invoice ID {} is already locked. Dropping message.", invoice.getId());
-//                return;
-//            }
-//
-//            log.info("✅ Lock acquired. Processing Invoice...");
-//            log.info("Vendor: {}", invoice.getVendorName());
-//            log.info("Amount: ₹{}", invoice.getAmount());
-//
-//        } catch (Exception e) {
-//            log.error("❌ Failed to process Kafka message: {}", e.getMessage(), e);
-//        }
-//    }
-
     @KafkaListener(topics = "invoice-submitted", groupId = "ledger-processing-group")
     public void processInvoice(Invoice invoice) {
 
