@@ -1,9 +1,12 @@
 services:
   mongodb:
-    image: mongo:latest
-    container_name: sl-mongo
+    image: mongodb/mongodb-atlas-local:latest
+    container_name: sl-mongodb-atlas
     ports:
       - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
 
   redis:
     image: redis:latest
