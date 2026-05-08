@@ -1,6 +1,6 @@
 package com.daya.project.sentiment_ledger;
 
-import com.daya.project.sentiment_ledger.config.KafkaTopicConfig;
+import com.daya.project.sentiment_ledger.config.kafka.KafkaTopicConfig;
 import com.daya.project.sentiment_ledger.model.Invoice;
 import com.daya.project.sentiment_ledger.model.LedgerEntry;
 import com.daya.project.sentiment_ledger.model.PaymentEvent;
@@ -17,14 +17,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;

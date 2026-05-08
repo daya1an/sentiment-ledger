@@ -1,4 +1,4 @@
-package com.daya.project.sentiment_ledger.config;
+package com.daya.project.sentiment_ledger.config.kafka;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.context.annotation.Bean;

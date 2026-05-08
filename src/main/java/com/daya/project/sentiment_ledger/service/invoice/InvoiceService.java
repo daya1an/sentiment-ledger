@@ -1,6 +1,6 @@
 package com.daya.project.sentiment_ledger.service.invoice;
 
-import com.daya.project.sentiment_ledger.config.KafkaTopicConfig;
+import com.daya.project.sentiment_ledger.config.kafka.KafkaTopicConfig;
 import com.daya.project.sentiment_ledger.model.IdempotencyKey;
 import com.daya.project.sentiment_ledger.model.Invoice;
 import com.daya.project.sentiment_ledger.repository.IdempotencyRepository;

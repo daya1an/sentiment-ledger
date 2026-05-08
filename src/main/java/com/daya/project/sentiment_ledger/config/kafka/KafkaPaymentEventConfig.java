@@ -1,4 +1,4 @@
-package com.daya.project.sentiment_ledger.config;
+package com.daya.project.sentiment_ledger.config.kafka;
 
 import com.daya.project.sentiment_ledger.model.PaymentEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
