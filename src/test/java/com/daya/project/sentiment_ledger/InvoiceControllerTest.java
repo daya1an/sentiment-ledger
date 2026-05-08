@@ -1,4 +1,4 @@
-package com.daya.project.sentiment_ledger.contoller;
+package com.daya.project.sentiment_ledger;
 
 import com.daya.project.sentiment_ledger.controller.InvoiceController;
 import com.daya.project.sentiment_ledger.model.Invoice;

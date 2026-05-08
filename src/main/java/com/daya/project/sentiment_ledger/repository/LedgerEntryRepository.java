@@ -4,9 +4,15 @@ import com.daya.project.sentiment_ledger.model.LedgerEntry;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 
 @Repository
 public interface LedgerEntryRepository extends MongoRepository<LedgerEntry, String> {
+
     List<LedgerEntry> findByInvoiceId(String invoiceId);
+
+    List<LedgerEntry> findByActionTaken(String actionTaken);
+
+    List<LedgerEntry> findByTimestampBetween(Instant start, Instant end);
 }

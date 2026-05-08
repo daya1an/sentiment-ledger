@@ -1,4 +1,4 @@
-package com.daya.project.sentiment_ledger.service;
+package com.daya.project.sentiment_ledger.service.policy;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;

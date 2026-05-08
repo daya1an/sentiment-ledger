@@ -22,6 +22,9 @@ public class Invoice {
     private Status status;
     private Instant createdAt;
 
+    public Invoice(String techCorp, BigDecimal bigDecimal, String hardware) {
+    }
+
     public enum Status {
         PENDING, AI_APPROVED, REJECTED, PAID, DUPLICATE_FLAGGED
     }
