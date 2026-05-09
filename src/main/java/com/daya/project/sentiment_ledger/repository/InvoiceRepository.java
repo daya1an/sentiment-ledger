@@ -23,4 +23,8 @@ public interface InvoiceRepository extends MongoRepository<Invoice, String> {
     @Query("{ 'status': ?0, 'createdAt': { $gte: ?1 } }")
     List<Invoice> findRecentInvoicesByStatus(Invoice.Status status, Instant since);
 
+    List<Invoice> findByCreatedAtAfter(Instant createdAt);
+
+    List<Invoice> findByConfidenceScoreLessThan(double confidenceScore);
+
 }

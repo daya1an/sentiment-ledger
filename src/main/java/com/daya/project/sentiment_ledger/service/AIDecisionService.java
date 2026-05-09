@@ -1,89 +1,112 @@
 package com.daya.project.sentiment_ledger.service;
 
+import com.daya.project.sentiment_ledger.model.AIApprovalDecision;
 import com.daya.project.sentiment_ledger.model.Invoice;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
-import static java.util.Optional.ofNullable;
 
 @Slf4j
 @Service
 public class AIDecisionService {
-    private final ChatClient chatClient;
-    private final ThreadLocal<String> reasoningContext = new ThreadLocal<>();
 
-    // Pre-compiled regex patterns to avoid recompilation
-    private static final Pattern MARKDOWN_FENCE_PATTERN = Pattern.compile("```(?:json)?");
+    private final ChatClient chatClient;
+    private final ObjectMapper objectMapper;
+    private ThreadLocal<String> reasoningContext = new ThreadLocal<>();
 
     public AIDecisionService(ChatClient chatClient) {
         this.chatClient = chatClient;
+        this.objectMapper = new ObjectMapper();
     }
 
-    public String getApprovalDecision(Invoice invoice, String policies) {
-        String prompt = """
-                        Review invoice against policies. Return ONLY JSON:
-                        {
-                          "decision": "APPROVED|REJECTED|MANUAL_REVIEW",
-                          "reasoning": "Brief explanation (max 200 chars)",
-                          "confidence": 0.0-1.0
-                        }
-                        
-                        Policies:
-                        """+ policies +"""
-                        Invoice: Vendor=%s | Amount=%s | Category=%s
-                        """.formatted(invoice.getVendorName(), invoice.getAmount(), invoice.getCategory());
+    public AIApprovalDecision getApprovalDecision(Invoice invoice, String policies) {
+        String prompt = String.format("""
+            You are an expert financial auditor. Review the invoice against the policies and respond ONLY with valid JSON.
+            
+            POLICIES:
+            %s
+            
+            INVOICE DETAILS:
+            - Vendor: %s
+            - Amount: ₹%s
+            - Category: %s
+            
+            RESPOND WITH THIS EXACT JSON FORMAT (no markdown, no explanation):
+            {
+              "decision": "APPROVED" | "REJECTED" | "MANUAL_REVIEW",
+              "confidence": 0.0-1.0,
+              "reasoning": "Brief explanation (max 150 chars)",
+              "riskFlags": ["flag1", "flag2"],
+              "requiresApprovalLevel": "NONE" | "MANAGER" | "DIRECTOR" | "CFO"
+            }
+            
+            Requirements:
+            - Be decisive. If policies are clear, commit to a decision.
+            - confidence: 0.9+ for certain decisions, 0.5-0.7 for uncertain, <0.5 needs MANUAL_REVIEW
+            - riskFlags: Note any suspicious patterns (duplicate vendor, unusual amount, policy edge cases)
+            - requiresApprovalLevel: Who in the org should sign off on this decision?
+            """, policies, invoice.getVendorName(), invoice.getAmount(), invoice.getCategory());
 
-        log.info("🤖 Calling Gemini AI for invoice: {}", invoice.getId());
-
-        String aiResponse = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content()
-                .trim();
+        log.info("🤖 Calling Gemini AI for invoice: {} | Vendor: {}",
+                invoice.getId(), invoice.getVendorName());
 
         try {
-            // 🔧 Strip Markdown code fences if present using pre-compiled pattern
-            if (aiResponse.startsWith("```")) {
-                aiResponse = MARKDOWN_FENCE_PATTERN.matcher(aiResponse)
-                        .replaceAll("")
-                        .trim();
-            }
+            String aiResponse = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content()
+                    .trim();
 
-            // 🔧 Extra safeguard – extract only JSON object portion
-            int start = aiResponse.indexOf("{");
-            int end = aiResponse.lastIndexOf("}");
-            if (start >= 0 && end >= 0) {
-                aiResponse = aiResponse.substring(start, end + 1);
-            }
+            log.debug("Raw AI response: {}", aiResponse);
 
             // Parse JSON response
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode responseJson = mapper.readTree(aiResponse);
+            AIApprovalDecision decision = objectMapper.readValue(aiResponse, AIApprovalDecision.class);
 
-            String decision = responseJson.get("decision").asText();
-            String reasoning = responseJson.get("reasoning").asText();
-            double confidence = responseJson.get("confidence").asDouble();
+            // Validate decision
+            if (!decision.isValid()) {
+                log.warn("⚠️ Invalid AI decision structure. Defaulting to MANUAL_REVIEW");
+                decision.setDecision("MANUAL_REVIEW");
+                decision.setConfidence(0.0);
+                decision.setReasoning("AI response validation failed");
+            }
 
-            // Store reasoning in thread-local for later audit trail
+            // Store reasoning for audit
             String fullContext = String.format(
-                    "Decision: %s | Confidence: %.2f | Reasoning: %s | Policies Applied: %s",
-                    decision, confidence, reasoning, policies.substring(0, Math.min(200, policies.length()))
+                    "Decision: %s | Confidence: %.2f | Reasoning: %s | Risk Flags: %s | Approval Level: %s",
+                    decision.getDecision(),
+                    decision.getConfidence(),
+                    decision.getReasoning(),
+                    String.join(", ", decision.getRiskFlags()),
+                    decision.getRequiresApprovalLevel()
             );
             reasoningContext.set(fullContext);
 
-            log.info("🎯 AI Decision: {} (confidence: {})", decision, confidence);
+            log.info("🎯 AI Decision: {} (confidence: %.2f) | Flags: {}",
+                    decision.getDecision(), decision.getConfidence(), decision.getRiskFlags());
+
             return decision;
 
-        } catch (Exception e) {
-            log.error("Failed to parse AI response: {}", aiResponse, e);
-            reasoningContext.set("Failed to parse AI response: " + aiResponse);
-            return "MANUAL_REVIEW";
+        } catch (JsonProcessingException e) {
+            log.error("❌ Failed to parse AI response as JSON: {}", e.getMessage());
+            reasoningContext.set("JSON parsing failed: " + e.getMessage());
+
+            // Fail safe: return MANUAL_REVIEW
+            AIApprovalDecision fallback = new AIApprovalDecision();
+            fallback.setDecision("MANUAL_REVIEW");
+            fallback.setConfidence(0.0);
+            fallback.setReasoning("AI service error - defaulting to manual review");
+            fallback.setRiskFlags(List.of("AI_SERVICE_ERROR"));
+            fallback.setRequiresApprovalLevel("MANAGER");
+
+            return fallback;
         }
     }
 

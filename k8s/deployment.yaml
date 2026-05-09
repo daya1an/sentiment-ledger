@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-ledger
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sentiment-ledger
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: sentiment-ledger
+    spec:
+      containers:
+        - name: sentiment-ledger
+          image: sentiment-ledger:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: metrics
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: sentiment-ledger-secrets
+                  key: mongodb-uri
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis-service"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SPRING_AI_GOOGLE_GENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sentiment-ledger-secrets
+                  key: gemini-api-key
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"

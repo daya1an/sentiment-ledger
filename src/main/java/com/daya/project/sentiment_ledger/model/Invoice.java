@@ -18,12 +18,11 @@ public class Invoice {
     private String id;
     private String vendorName;
     private BigDecimal amount;
-    private String category; // e.g., "SOFTWARE", "HARDWARE", "TRAVEL"
+    private String category;
     private Status status;
     private Instant createdAt;
-
-    public Invoice(String techCorp, BigDecimal bigDecimal, String hardware) {
-    }
+    private double confidenceScore; // NEW: AI confidence in decision
+    private String approvalLevel; // NEW: CFO, DIRECTOR, MANAGER, NONE
 
     public enum Status {
         PENDING, AI_APPROVED, REJECTED, PAID, DUPLICATE_FLAGGED
