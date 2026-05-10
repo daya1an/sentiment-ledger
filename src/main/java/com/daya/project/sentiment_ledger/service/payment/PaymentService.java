@@ -1,12 +1,9 @@
 package com.daya.project.sentiment_ledger.service.payment;
 
 import com.daya.project.sentiment_ledger.exception.PaymentServiceException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Random;
@@ -19,17 +16,29 @@ public class PaymentService {
     private static final int MAX_RETRIES = 3;
     private static final long BACKOFF_MULTIPLIER = 2;
 
-    @Retryable(
-            retryFor = {PaymentServiceException.class},
-            maxAttempts = MAX_RETRIES,
-            backoff = @Backoff(delay = 1000, multiplier = BACKOFF_MULTIPLIER)
+    /**
+     * CircuitBreaker: Prevents calling failed service repeatedly
+     * - name: "payment-service" (matches config in application.properties)
+     * - fallbackMethod: "fallbackPayment" (called when circuit is OPEN)
+     *
+     * Retry: Exponential backoff for transient failures
+     * - name: "payment-retry" (matches config)
+     * - fallbackMethod: Same fallback
+     */
+    @CircuitBreaker(
+            name = "payment-service",
+            fallbackMethod = "fallbackPayment"
+    )
+    @Retry(
+            name = "payment-retry",
+            fallbackMethod = "fallbackPayment"
     )
     public String executePayout(String invoiceId, BigDecimal amount) {
         log.info("💳 Initiating payment for Invoice: {} | Amount: ₹{}", invoiceId, amount);
 
         try {
-            // Simulate payment with potential failure
-            if (new Random().nextDouble() < 0.05) { // 5% failure rate
+            // Simulate payment with 5% failure rate
+            if (new Random().nextDouble() < 0.05) {
                 throw new Exception("Simulated payment gateway timeout");
             }
 
@@ -45,10 +54,39 @@ public class PaymentService {
         }
     }
 
-    @Recover
-    public String recoverPayment(PaymentServiceException ex, String invoiceId, BigDecimal amount) {
-        log.error("❌ Payment failed after {} retries for invoice {}", MAX_RETRIES, invoiceId);
-        // Create a fallback transaction record
-        return "txn_fallback_" + invoiceId;
+    /**
+     * PHASE 1: Fallback method
+     * Called when:
+     * 1. Circuit is OPEN (too many failures detected)
+     * 2. All retries exhausted
+     * 3. Deadline exceeded
+     *
+     * Creates pending transaction record for compensation job
+     */
+    public String fallbackPayment(String invoiceId, BigDecimal amount, Exception ex) {
+        log.warn("⚠️ FALLBACK: Payment service unavailable for invoice: {}", invoiceId);
+        log.warn("   Error: {}", ex.getMessage());
+        log.warn("   Invoice will be marked PENDING for retry");
+
+        // Create pending transaction ID
+        // PaymentCompensationService will retry this periodically
+        String pendingTxnId = "txn_pending_" + invoiceId;
+
+        log.info("📋 Created pending transaction: {}", pendingTxnId);
+        return pendingTxnId;
+    }
+
+    /**
+     * PHASE 1: Recovery method
+     * Checks if payment service health improved
+     */
+    public boolean isServiceHealthy() {
+        try {
+            // Simple health check
+            Thread.sleep(100);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

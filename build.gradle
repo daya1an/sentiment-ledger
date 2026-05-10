@@ -43,6 +43,12 @@ dependencies {
 	implementation 'org.springframework.kafka:spring-kafka'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+	// Phase 1: Resilience
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.1.0'
+	implementation 'io.github.resilience4j:resilience4j-retry:2.1.0'
+	implementation 'io.github.resilience4j:resilience4j-timelimiter:2.1.0'
+
 	// Testing dependencies
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
