@@ -43,7 +43,19 @@ public class PaymentCompensationService {
         pendingInvoices.forEach(invoice -> {
             try {
                 log.info("📤 Retrying payment for invoice: {}", invoice.getId());
-                String txnId = paymentService.executePayout(invoice.getId(), invoice.getAmount());
+                
+                // Validate vendor Stripe Connect ID exists
+                if (invoice.getVendorStripeConnectId() == null || invoice.getVendorStripeConnectId().trim().isEmpty()) {
+                    log.warn("⚠️ Cannot retry payment for invoice {} - vendor Stripe Connect ID missing", invoice.getId());
+                    return;
+                }
+                
+                String txnId = paymentService.executePayout(
+                        invoice.getId(), 
+                        invoice.getAmount(), 
+                        invoice.getVendorName(),
+                        invoice.getVendorStripeConnectId()
+                );
 
                 // Update status
                 invoice.setStatus(Invoice.Status.PAID);
@@ -53,7 +65,7 @@ public class PaymentCompensationService {
                 ledgerEntryRepository.save(new LedgerEntry(
                         invoice.getId(),
                         "PAID_RETRY",
-                        "Retry successful. Transaction ID: " + txnId
+                        "Retry successful. Vendor " + invoice.getVendorName() + " credited. Transfer ID: " + txnId
                 ));
 
                 log.info("✅ Payment retry successful for invoice: {}", invoice.getId());

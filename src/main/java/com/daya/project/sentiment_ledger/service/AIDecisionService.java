@@ -65,6 +65,8 @@ public class AIDecisionService {
                     .content()
                     .trim();
 
+            aiResponse = stripJsonFences(aiResponse);
+
             log.debug("Raw AI response: {}", aiResponse);
 
             // Parse JSON response
@@ -113,6 +115,15 @@ public class AIDecisionService {
     public String getReasoningContext() {
         return Optional.ofNullable(reasoningContext.get())
                 .orElse("No reasoning available");
+    }
+    private String stripJsonFences(String response) {
+        if (response.startsWith("```")) {
+            response = response.replaceFirst("^```(json)?", "").trim();
+            if (response.endsWith("```")) {
+                response = response.substring(0, response.length() - 3).trim();
+            }
+        }
+        return response;
     }
 
     public void clearReasoningContext() {
