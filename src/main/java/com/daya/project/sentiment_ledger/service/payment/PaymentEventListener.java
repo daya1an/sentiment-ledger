@@ -65,25 +65,67 @@ public class PaymentEventListener {
         }
 
         // Execute payment for APPROVED
+        // Inside PaymentEventListener.java -> handlePaymentEvent(PaymentEvent event)
+
         if ("APPROVED".equals(event.getDecision())) {
             try {
-                String transactionId = paymentService.executePayout(event.getInvoiceId(), event.getAmount());
+                // Validate vendor has Stripe Connect ID
+                if (invoice.getVendorStripeConnectId() == null || invoice.getVendorStripeConnectId().trim().isEmpty()) {
+                    log.error("❌ Vendor {} missing Stripe Connect ID. Cannot process payment for invoice {}", 
+                            invoice.getVendorName(), event.getInvoiceId());
+                    invoice.setStatus(Invoice.Status.PENDING);
+                    invoiceRepository.save(invoice);
+                    ledgerEntryRepository.save(new LedgerEntry(
+                            event.getInvoiceId(),
+                            "PAYMENT_FAILED",
+                            "Vendor Stripe Connect ID is missing"
+                    ));
+                    metricsService.incrementPaymentErrors();
+                    return;
+                }
 
+                // 1. Execute Stripe transfer to vendor
+                String transferId = paymentService.executePayout(
+                        event.getInvoiceId(),
+                        event.getAmount(),
+                        invoice.getVendorName(),
+                        invoice.getVendorStripeConnectId()
+                );
+
+                // 2. Update Database Status
                 invoice.setStatus(Invoice.Status.PAID);
                 invoiceRepository.save(invoice);
 
+                // 3. Generate Bill / Receipt Content
+                String generatedBill = String.format(
+                        "====================================\n" +
+                                "       SENTIMENT LEDGER BILL        \n" +
+                                "====================================\n" +
+                                "Invoice ID:    %s\n" +
+                                "Vendor:        %s\n" +
+                                "Vendor ConnectId: %s\n" +
+                                "Amount Paid:   $%.2f\n" +
+                                "Status:        PAID\n" +
+                                "Transfer ID:   %s\n" +
+                                "Date:          %s\n" +
+                                "====================================",
+                        invoice.getId(), invoice.getVendorName(), invoice.getVendorStripeConnectId(), 
+                        event.getAmount(), transferId, java.time.Instant.now()
+                );
+
+                log.info("\n{}\n", generatedBill);
+
+                // 4. Save to immutable ledger
                 ledgerEntryRepository.save(new LedgerEntry(
                         event.getInvoiceId(),
                         "PAID",
-                        "Transaction ID: " + transactionId
+                        "Stripe Transfer Successful. Vendor " + invoice.getVendorName() + " credited. Transfer ID: " + transferId + ". Bill Generated."
                 ));
 
                 metricsService.recordPaymentSuccess(event.getAmount());
-                log.info("✅ Payment successful for invoice {}. Transaction ID: {}",
-                        event.getInvoiceId(), transactionId);
 
             } catch (Exception e) {
-                log.error("❌ Payment failed for invoice {}: {}", event.getInvoiceId(), e.getMessage());
+                log.error("❌ Payment execution failed for invoice {}: {}", event.getInvoiceId(), e.getMessage());
                 invoice.setStatus(Invoice.Status.PENDING);
                 invoiceRepository.save(invoice);
                 metricsService.incrementPaymentErrors();

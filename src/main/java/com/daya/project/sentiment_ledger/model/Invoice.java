@@ -23,6 +23,7 @@ public class Invoice {
     private Instant createdAt;
     private double confidenceScore; // NEW: AI confidence in decision
     private String approvalLevel; // NEW: CFO, DIRECTOR, MANAGER, NONE
+    private String vendorStripeConnectId; // Vendor's Stripe Connect Account ID for payouts
 
     public enum Status {
         PENDING, AI_APPROVED, REJECTED, PAID, DUPLICATE_FLAGGED
